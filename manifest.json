@@ -2,6 +2,17 @@
     "manifest_version": 3,
     "name": "Ad skipper",
     "description": "Skips ads for you so you enjoy yout pizza without touching your mouse",
-    "version": "0.1"
-    
+    "version": "0.1",
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*.youtube.com/*"
+            ],
+            "js": [
+                "./main.js"
+            ],
+            "run_at": "document_end",
+            "all_frames": true
+        }
+    ]
   }
