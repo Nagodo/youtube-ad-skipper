@@ -1,4 +1,5 @@
 const MainLoopInterval = 200; // ms
+const DEBUG = true;
 
 const AdInProgressSelectors = [
     '.ytp-skip-ad-button',
@@ -7,6 +8,8 @@ const AdInProgressSelectors = [
 
 const SkipAdBtnSelectors = [
     '.ytp-skip-ad-button',
+    '.ytp-skip-ad-button-modern',
+
 ]
 
 const MuteBtnSelectors = [
@@ -86,6 +89,11 @@ class AdHandler {
         }
     }
 
+    ClickSkipBtn() {
+        if (this.AdSkipperInstance === null) return;
+        this.AdSkipperInstance.SkipAd();
+    }
+
     AdEnded() {
         this.adInProgress = false;
         this.skipBtnDetected = false;
@@ -101,21 +109,23 @@ class AdSkipper {
     }
 
     SetupListeners() {
-        EventsHandler.addEvent(AllEvents.SkipBtnDetected, () => this.HandleSkipBtnDetected);
+        EventsHandler.addEvent(AllEvents.SkipBtnDetected, () => this.HandleSkipBtnDetected());
     }
 
     HandleSkipBtnDetected() {
-        console.log('Skip button detected - AdSkipper');
+        Debug('Skip button detected - AdSkipper');
         this.SkipAd();
     }
 
     SkipAd() {
-        console.log('Ad skipped');
-        for (let selector of SkipAdBtnSelectors) {
-            var skipBtn = document.querySelector(selector);
-            if (skipBtn != null) {
-                skipBtn.click();
-            }
+        Debug('Trying to skip ad');
+        const elements = document.querySelectorAll(SkipAdBtnSelectors);
+        console.log(elements);
+        if (elements.length === 0) return;
+
+        for (let element of elements) {
+            console.log(element);
+            element.click();
         }
     }
 
@@ -123,6 +133,9 @@ class AdSkipper {
 }
 
 class AdMuter {
+
+    cachedVolume = 0;
+
     constructor() {
     
     }
@@ -133,12 +146,12 @@ class AdMuter {
     }
 
     HandleAdStarted() {
-        console.log('Ad started - AdMuter');
+        Debug('Ad started - AdMuter');
         this.MuteVideo();
     }
 
     HandleAdEnded() {
-        console.log('Ad ended - AdMuter');
+        Debug('Ad ended - AdMuter');
         this.UnmuteVideo();
     }
 
@@ -153,22 +166,45 @@ class AdMuter {
         return false;
     }
 
+    GetVolume() {
+        const volumeSlider = document.querySelector(VolumeSliderSelector);
+        if (volumeSlider === null) return 0;
+
+        let volume = volumeSlider.style.left;
+        volume = volume.replace('%', '');
+        volume = volume.replace('px', '');
+
+        return parseInt(volume);
+    }
+
     MuteVideo() {
-        console.log('Video muted');
+        Debug('Video muted');
+
+        this.cachedVolume = this.GetVolume();
 
         let isMuted = this.IsVideoMuted();
         if (isMuted) return;
 
         this.ClickMuteBtn();
+
+        const volumeSlider = document.querySelector(VolumeSliderSelector);
+        if (volumeSlider === null) return;
+
+        volumeSlider.style.left = '0px';
     }
 
     UnmuteVideo() {
-        console.log('Video unmuted');
+        Debug('Video unmuted');
 
         let isMuted = this.IsVideoMuted();
         if (!isMuted) return;
 
         this.ClickMuteBtn();
+
+        const volumeSlider = document.querySelector(VolumeSliderSelector);
+        if (volumeSlider === null) return;
+
+        volumeSlider.style.left = this.cachedVolume + 'px';
     }
 
     ClickMuteBtn() {
@@ -201,7 +237,13 @@ function MainLoop() {
     } else if (AdHandlerInstance.adInProgress && !AdHandlerInstance.skipBtnDetected) {
         AdHandlerInstance.CheckForSkipBtn();
 
-    } else if (AdHandlerInstance.adInProgress) {
+    }
+    else if (AdHandlerInstance.adInProgress && AdHandlerInstance.skipBtnDetected) {
+        AdHandlerInstance.ClickSkipBtn();
+
+    }
+    
+    if (AdHandlerInstance.adInProgress) {
         let adStillPlaying = AdHandlerInstance.IsAdPlaying();
         if (!adStillPlaying) {
             AdHandlerInstance.AdEnded();
@@ -210,3 +252,8 @@ function MainLoop() {
 }
 
 setInterval(MainLoop, MainLoopInterval);
+
+function Debug(message) {
+    if (!DEBUG) return
+    console.log(message);
+}
